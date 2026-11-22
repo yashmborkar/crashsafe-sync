@@ -8,7 +8,7 @@ The baseline is 51 physical lines and the library example is 48 (`wc -l`, includ
 | --- | --- | --- |
 | Kill during destination write, rollback and restart | Tested with SIGKILL after one committed page | Tested with SIGKILL on first page |
 | Competing workers | Tested using independent pools | Tested with concurrent processes and advisory lock |
-| SQL error rolls back writes and checkpoint | Tested with unique constraint error | Transaction rollback implemented, not independently tested |
+| SQL error rolls back writes and checkpoint | Tested with unique constraint error | Tested with a trigger error after one write |
 | Replay with UPSERT | Tested | Tested by resetting cursor and replaying |
 | Invalid checkpoint | Tested after committed progress | Tested with invalid stored offset |
 | HTTP 429, progress during retry | Tested | p-retry present, sample has no 429 or Retry-After policy |

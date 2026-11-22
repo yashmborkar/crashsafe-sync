@@ -52,6 +52,18 @@ test('baseline interruption, lock exclusion, rollback, resume and replay', async
     await pool.query("UPDATE baseline_checkpoint SET offset_value=0, completed=false WHERE sync_key='baseline:customers:v1'");
     assert.equal((await finished(run())).code, 0);
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM baseline_customers')).rows[0].n, 35);
+    await pool.query("UPDATE baseline_checkpoint SET offset_value=0, completed=false WHERE sync_key='baseline:customers:v1'");
+    await pool.query('TRUNCATE baseline_customers');
+    await pool.query(`CREATE OR REPLACE FUNCTION pg_temp_placeholder() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.external_id = 'customer_2' THEN RAISE EXCEPTION 'injected SQL error'; END IF; RETURN NEW; END $$`);
+    await pool.query('CREATE TRIGGER baseline_test_delay BEFORE INSERT ON baseline_customers FOR EACH ROW EXECUTE FUNCTION pg_temp_placeholder()');
+    const sqlFailure = await finished(run());
+    assert.notEqual(sqlFailure.code, 0);
+    assert.match(sqlFailure.output, /injected SQL error/);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM baseline_customers')).rows[0].n, 0);
+    assert.equal((await pool.query("SELECT offset_value FROM baseline_checkpoint WHERE sync_key='baseline:customers:v1'")).rows[0].offset_value, 0);
+    await pool.query('DROP TRIGGER baseline_test_delay ON baseline_customers');
+    await pool.query('DROP FUNCTION pg_temp_placeholder()');
     await pool.query("UPDATE baseline_checkpoint SET offset_value=-1, completed=false WHERE sync_key='baseline:customers:v1'");
     const invalid = await finished(run());
     assert.notEqual(invalid.code, 0);
