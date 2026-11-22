@@ -45,10 +45,12 @@ test('baseline interruption, lock exclusion, rollback, resume and replay', async
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM baseline_customers')).rows[0].n, 0);
     const resumed = await finished(run());
     assert.equal(resumed.code, 0, resumed.output);
-    assert.match(resumed.output, /offset_value: 20/);
+    const resumedCheckpoint = await pool.query("SELECT offset_value, completed FROM baseline_checkpoint WHERE sync_key='baseline:customers:v1'");
+    assert.deepEqual(resumedCheckpoint.rows[0], {offset_value: 20, completed: false});
     const completed = await finished(run());
     assert.equal(completed.code, 0, completed.output);
-    assert.match(completed.output, /offset_value: 35/);
+    const completedCheckpoint = await pool.query("SELECT offset_value, completed FROM baseline_checkpoint WHERE sync_key='baseline:customers:v1'");
+    assert.deepEqual(completedCheckpoint.rows[0], {offset_value: 35, completed: true});
     await pool.query("UPDATE baseline_checkpoint SET offset_value=0, completed=false WHERE sync_key='baseline:customers:v1'");
     assert.equal((await finished(run())).code, 0);
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM baseline_customers')).rows[0].n, 35);
