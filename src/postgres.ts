@@ -5,6 +5,8 @@ import type { AcquiredLease, Lease, SyncState, SyncStore } from "./types.js";
 export interface SqlConnection {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;
   release(error?: Error | boolean): void;
+  on?(event: "error", listener: (error: Error) => void): unknown;
+  removeListener?(event: "error", listener: (error: Error) => void): unknown;
 }
 export interface SqlPool {
   connect(): Promise<SqlConnection>;
@@ -37,12 +39,16 @@ export class PgSyncStore implements SyncStore<SqlConnection> {
 
   private async withClient<T>(fn: (client: SqlConnection) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();
+    let connectionFailed = false;
+    const onError = () => { connectionFailed = true; };
+    client.on?.("error", onError);
     try {
       const result = await fn(client);
-      client.release();
+      client.removeListener?.("error", onError);
+      client.release(connectionFailed);
       return result;
     } catch (error) {
-      // A failed connection or rollback must not be returned to the pool.
+      client.removeListener?.("error", onError);
       client.release(true);
       throw error;
     }
