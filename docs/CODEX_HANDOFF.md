@@ -1,3 +1,5 @@
+> Historical record. See the README and current CI results for the current release status.
+
 # Copy/paste task for Codex / Antigravity
 
 You are an autonomous senior TypeScript/PostgreSQL library engineer. The repository is `crashsafe-sync`. Read `AGENTS.md`, `README.md`, source and tests first.

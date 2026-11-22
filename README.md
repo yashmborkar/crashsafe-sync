@@ -150,24 +150,13 @@ npm run pack:check        # what npm would publish
 
 Only `fetchPage()` is automatically retried. Throw `new HttpResponseError(429, 'rate limited', 2000)` to request a delay of 2 seconds; retryable statuses are 408, 425, 429 and 5xx. Other transient errors need `{retryable:true}` or a custom `retry.shouldRetry` callback. `CheckpointInvalidError` is never retried automatically. This prevents a failed *database write* from being silently retried without knowing if external effects occurred.
 
-`maxDurationMs` is a **soft limit** checked between pages; it does not cancel a fetch already in progress. Forward the `signal` to HTTP clients if they support cancellation. A lease must be long enough to cover unusually slow DB commits. Heartbeats renew it while the runner is active, but a page transaction locks the lease row and can delay renewal. An expired lease causes that page transaction to roll back. A stalled database query can delay takeover until PostgreSQL releases its locks.
+`maxDurationMs` is a **soft limit** checked between pages; it does not cancel a fetch already in progress. Forward the `signal` to HTTP clients if they support cancellation. A lease must be long enough to cover unusually slow DB commits. Heartbeats renew it while the runner is active, but a page transaction locks the lease row and can delay renewal. If the lease has expired at the final checkpoint update, that page transaction rolls back. A stalled database query can delay takeover until PostgreSQL releases its locks.
 
 ### Reset and re-sync
 
 A completed sync stays completed. To full-resync, use a **new `key`** (for example `my-api:contacts:v2`) and reconcile old records in your application. Do not reset a cursor blindly when a provider says the source token expired.
 
 See [the baseline comparison](https://github.com/yashmborkar/crashsafe-sync/blob/main/docs/BASELINE.md) for measured example size and tested failure scenarios.
-
-## Roadmap
-
-- [x] Small typed API, retries, resumable bounded runs, PgSyncStore + migration
-- [x] Test-only in-memory store and unit tests
-- [x] Real PostgreSQL concurrency/integrity integration test suite
-- [x] Run integration suite on a disposable PostgreSQL instance
-- [ ] Produce an actual competent-baseline comparison with raw measurements
-- [ ] Test integration in a real SaaS repository and obtain maintainer feedback
-- [ ] Verify npm name and repository metadata, publish v1.0.0 under the owner's account
-- [ ] Expand only based on real user demand
 
 ## Security and operations
 

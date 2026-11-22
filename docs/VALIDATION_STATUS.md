@@ -1,3 +1,5 @@
+> Historical record. See the README and current CI results for the current release status.
+
 # Validation status — 2026-11-22
 
 ## What was run in this environment
