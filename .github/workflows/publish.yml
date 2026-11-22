@@ -35,4 +35,4 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck && npm test && npm run test:pg && npm run pack:check
       # Configure npm Trusted Publisher for this exact GitHub repo/workflow.
-      - run: npm publish --access public --tag beta --provenance
+      - run: npm publish --access public --tag latest --provenance

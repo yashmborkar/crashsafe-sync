@@ -4,7 +4,7 @@
 
 `crashsafe-sync` is a small, dependency-free TypeScript library core for resumable paginated API imports. Bring your own API SDK and PostgreSQL client. It does not replace Airbyte, Nango, Temporal, queues, or your provider's cursor rules.
 
-> **Status: 0.1.0-beta.0 in preparation.** Publishing requires the test suite and a disposable PostgreSQL database.
+> **Status: 1.0.0 in preparation.** Publishing requires the test suite and a disposable PostgreSQL database.
 
 ## Why it exists
 
@@ -36,7 +36,7 @@ If the transaction fails, neither write is committed. A later invocation resumes
 
 ## Installation
 
-This package is prepared for a beta release. Before publication, install from a local checkout.
+This package is prepared for its first stable release. Before publication, install from a local checkout.
 
 ```bash
 npm install pg @yashborkar/crashsafe-sync
@@ -166,7 +166,7 @@ See [the baseline comparison](https://github.com/yashmborkar/crashsafe-sync/blob
 - [x] Run integration suite on a disposable PostgreSQL instance
 - [ ] Produce an actual competent-baseline comparison with raw measurements
 - [ ] Test integration in a real SaaS repository and obtain maintainer feedback
-- [ ] Verify npm name and repository metadata, publish v0.1.0 under the owner's account
+- [ ] Verify npm name and repository metadata, publish v1.0.0 under the owner's account
 - [ ] Expand only based on real user demand
 
 ## Security and operations

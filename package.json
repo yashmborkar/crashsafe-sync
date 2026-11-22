@@ -1,6 +1,6 @@
 {
   "name": "@yashborkar/crashsafe-sync",
-  "version": "0.1.0-beta.0",
+  "version": "1.0.0",
   "description": "Crash-safe, PostgreSQL-backed checkpoint commits for paginated API imports",
   "type": "module",
   "license": "MIT",
@@ -39,13 +39,13 @@
     "prepublishOnly": "npm run test && npm run test:pg"
   },
   "devDependencies": {
-    "p-retry": "^9.0.0",
+    "p-retry": "^7.1.1",
     "pg": "^8.23.0",
     "typescript": "^5.9.0"
   },
   "publishConfig": {
     "access": "public",
-    "tag": "beta"
+    "tag": "latest"
   },
   "keywords": [
     "postgresql",
