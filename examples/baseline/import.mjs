@@ -20,7 +20,7 @@ try {
       const page = await pRetry(async () => {
         // Replace this deterministic source with a provider call.
         const offset = state.offset_value;
-        if (offset < 0 || offset > 35) throw new AbortError('invalid checkpoint');
+        if (offset < 0 || offset > 35) throw new AbortError(new Error('invalid checkpoint'));
         const records = Array.from({length: Math.min(10, 35 - offset)}, (_, i) => ({
           id: `customer_${offset + i + 1}`, name: `Customer ${offset + i + 1}`,
         }));

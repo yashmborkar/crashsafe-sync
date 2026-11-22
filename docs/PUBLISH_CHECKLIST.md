@@ -1,18 +1,9 @@
-# Publication checklist (owner must perform authenticated steps)
+# First stable publication
 
-- [ ] Choose and verify npm name. Current `@your-npm-username/crashsafe-sync` is PLACEHOLDER, not a verified available package.
-- [ ] Replace package name in package.json, README and example imports.
-- [ ] Create real GitHub repository and set `package.json.repository` to its exact URL.
-- [ ] Run `npm install` to generate `package-lock.json`; commit it; use `npm ci` in CI after that.
-- [ ] Run the integration suite with an isolated Postgres database and `SYNC_TEST_DB_OK=yes`.
-- [ ] Ensure CI passes on both supported Node versions.
-- [ ] Verify `npm pack --dry-run` contains only intended dist and SQL files, not credentials or sample data.
-- [ ] Validate the public exports by installing the generated npm tarball in a fresh example project.
-- [ ] Check dependency and license terms. Keep any provider SDK optional.
-- [ ] Verify package descriptions do not promise exactly-once external side effects.
-- [ ] Configure npm 2FA and/or trusted publisher; do not paste tokens or passwords into AI chats.
-- [ ] Prefer GitHub Actions OIDC trusted publishing for provenance, matching the exact repository/workflow.
-- [ ] Perform `npm whoami`, `npm view <name>`, `npm publish --dry-run` on your own machine.
-- [ ] Publish an initial beta after testing and checking the tarball, then verify the registry package and install command.
+The package is `@yashborkar/crashsafe-sync` version `1.0.0`, with public access and the `latest` tag. Publication requires explicit owner authorization after the local checks and GitHub Actions CI succeed.
 
-Docs: https://docs.npmjs.com/trusted-publishers/ and https://docs.npmjs.com/creating-and-publishing-scoped-public-packages/
+Run `npm ci`, `npm run typecheck`, `npm test`, `SYNC_TEST_DB_OK=yes DATABASE_URL=... npm run test:pg`, and `npm run pack:check` using a disposable PostgreSQL database. Review the package contents and confirm `npm whoami` identifies the owner.
+
+For an initial manual release, run `SYNC_TEST_DB_OK=yes DATABASE_URL=... npm publish --access public --tag latest` from the verified commit using an authenticated npm session and complete npm's interactive authentication. Afterwards check `npm view @yashborkar/crashsafe-sync version dist-tags --json` and install the published package in a clean project.
+
+npm's documented trusted publisher setup uses a package's settings. Its staged-publishing workflow can create a new package before it is installable, after which settings and trusted publishing can be configured. No staged or direct publish is authorized by this checklist. To use the GitHub workflow after configuring trust, select GitHub owner `yashmborkar`, repository `crashsafe-sync`, workflow `publish.yml`, and allow direct publishing. Newly created unvalidated trust configurations expire after two days. The manually dispatched workflow publishes the public package on `latest` and requests provenance.

@@ -272,3 +272,33 @@ test('invalid checkpoint error preserves previously committed progress', async (
   assert.deepEqual(await store.read(syncKey), before);
   assert.equal(await count(syncKey), 10);
 });
+
+test('caller abort releases the lease without advancing the checkpoint', async () => {
+  const syncKey = key('abort_lease');
+  const controller = new AbortController();
+  const engine = createSync({key: syncKey, store,
+    fetchPage: async () => {controller.abort(); return {records: [], nextCheckpoint: null, done: true};},
+    writeBatch: async () => {throw new Error('must not write');}});
+  await assert.rejects(engine.run({signal: controller.signal}), {name: 'AbortSyncError'});
+  assert.equal((await store.read(syncKey)).pagesCommitted, 0);
+  const next = await store.acquire(syncKey, 1000);
+  assert.ok(next);
+  await store.release(next.lease);
+});
+
+test('heartbeat connection failure aborts fetch and reports lease loss without progress', async () => {
+  const syncKey = key('heartbeat_disconnect');
+  const heartbeatPool = new pg.Pool({connectionString: process.env.DATABASE_URL});
+  const heartbeatStore = new PgSyncStore(heartbeatPool);
+  const engine = createSync({key: syncKey, store: heartbeatStore, leaseTtlMs: 1000, heartbeatIntervalMs: 50,
+    fetchPage: async ({signal}) => {
+      await heartbeatPool.end();
+      return new Promise((resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new Error('fetch aborted')), {once: true});
+      });
+    },
+    writeBatch: async () => {throw new Error('must not write');}});
+  await assert.rejects(engine.run(), LeaseLostError);
+  assert.equal((await store.read(syncKey)).pagesCommitted, 0);
+  assert.equal(await count(syncKey), 0);
+});

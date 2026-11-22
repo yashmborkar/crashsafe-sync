@@ -44,7 +44,10 @@ export function createSync<RecordType, Checkpoint, Transaction>(
       let recordsProcessed = 0;
       let lostLease = false;
       const local = new AbortController();
-      const signal = runOptions.signal ? AbortSignal.any([local.signal, runOptions.signal]) : local.signal;
+      const signal = local.signal;
+      const abortFromCaller = () => local.abort();
+      runOptions.signal?.addEventListener("abort", abortFromCaller, { once: true });
+      if (runOptions.signal?.aborted) local.abort();
       const started = Date.now();
       let renewing = false;
       const timer = heartbeatMs > 0 ? setInterval(() => {
@@ -64,7 +67,13 @@ export function createSync<RecordType, Checkpoint, Transaction>(
           if (lostLease) throw new LeaseLostError(options.key);
           abortIfNeeded(signal);
           const previous = current.checkpoint;
-          const page = await retryFetch(() => options.fetchPage({ checkpoint: previous, signal }), signal, options.retry);
+          let page;
+          try {
+            page = await retryFetch(() => options.fetchPage({ checkpoint: previous, signal }), signal, options.retry);
+          } catch (error) {
+            if (lostLease) throw new LeaseLostError(options.key);
+            throw error;
+          }
           if (lostLease) throw new LeaseLostError(options.key);
           abortIfNeeded(signal);
           if (!page || !Array.isArray(page.records) || typeof page.done !== "boolean") {
@@ -104,6 +113,7 @@ export function createSync<RecordType, Checkpoint, Transaction>(
         };
       } finally {
         if (timer) clearInterval(timer);
+        runOptions.signal?.removeEventListener("abort", abortFromCaller);
         local.abort();
         await options.store.release(lease).catch(() => {
           // Lease expiration + fencing provide safety if release cannot reach DB.
