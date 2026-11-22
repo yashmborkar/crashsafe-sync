@@ -1,0 +1,59 @@
+{
+  "name": "@yashborkar/crashsafe-sync",
+  "version": "0.1.0-beta.0",
+  "description": "Crash-safe, PostgreSQL-backed checkpoint commits for paginated API imports",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./postgres": {
+      "types": "./dist/postgres.d.ts",
+      "import": "./dist/postgres.js"
+    },
+    "./testing": {
+      "types": "./dist/memory.d.ts",
+      "import": "./dist/memory.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "sql",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node -e \"import('node:fs').then(fs=>fs.rmSync('dist',{recursive:true,force:true}))\"",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test tests/unit/*.test.mjs",
+    "test:pg": "npm run build && node --test tests/integration/*.test.mjs",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run test && npm run test:pg"
+  },
+  "devDependencies": {
+    "p-retry": "^9.0.0",
+    "pg": "^8.23.0",
+    "typescript": "^5.9.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  },
+  "keywords": [
+    "postgresql",
+    "sync",
+    "checkpoint",
+    "pagination",
+    "crash-recovery",
+    "typescript",
+    "api-import"
+  ]
+}

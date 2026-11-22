@@ -1,0 +1,38 @@
+name: Publish npm (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sync_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sync_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/sync_test
+      SYNC_TEST_DB_OK: 'yes'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck && npm test && npm run test:pg && npm run pack:check
+      # REQUIREMENTS: change placeholder package name, set real repository URL,
+      # configure npm Trusted Publisher for this exact GitHub repo/workflow.
+      - run: npm publish --access public --tag beta --provenance
