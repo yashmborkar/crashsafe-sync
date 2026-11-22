@@ -302,3 +302,16 @@ test('heartbeat connection failure aborts fetch and reports lease loss without p
   assert.equal((await store.read(syncKey)).pagesCommitted, 0);
   assert.equal(await count(syncKey), 0);
 });
+
+test('invalid checkpoint is not retried even with a custom retry policy', async () => {
+  const {CheckpointInvalidError} = await import('../../dist/index.js');
+  const syncKey = key('invalid_retry_override');
+  let calls = 0;
+  const engine = createSync({key: syncKey, store,
+    retry: {attempts: 3, baseDelayMs: 0, shouldRetry: () => true},
+    fetchPage: async () => {calls++; throw new CheckpointInvalidError('expired');},
+    writeBatch: async () => {}});
+  await assert.rejects(engine.run(), CheckpointInvalidError);
+  assert.equal(calls, 1);
+  assert.equal((await store.read(syncKey)).pagesCommitted, 0);
+});

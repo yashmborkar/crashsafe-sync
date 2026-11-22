@@ -47,7 +47,8 @@ export async function retryFetch<T>(
       return await task();
     } catch (error) {
       abortIfNeeded(signal);
-      const shouldRetry = config.shouldRetry?.(error) ?? defaultShouldRetry(error);
+      const shouldRetry = !(error instanceof CheckpointInvalidError) &&
+        (config.shouldRetry?.(error) ?? defaultShouldRetry(error));
       if (attempt >= attempts || !shouldRetry) throw error;
       const backoff = Math.min(max, base * 2 ** Math.min(attempt - 1, 30));
       const suggested = error instanceof HttpResponseError ? error.retryAfterMs : undefined;
