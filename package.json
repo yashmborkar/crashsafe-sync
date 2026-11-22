@@ -55,5 +55,13 @@
     "crash-recovery",
     "typescript",
     "api-import"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashmborkar/crashsafe-sync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yashmborkar/crashsafe-sync/issues"
+  },
+  "homepage": "https://github.com/yashmborkar/crashsafe-sync#readme"
 }

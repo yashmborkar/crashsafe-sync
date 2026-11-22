@@ -31,8 +31,8 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - run: npm install --no-audit --no-fund
+      - run: npm install --global npm@11.5.1
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck && npm test && npm run test:pg && npm run pack:check
-      # REQUIREMENTS: change placeholder package name, set real repository URL,
-      # configure npm Trusted Publisher for this exact GitHub repo/workflow.
+      # Configure npm Trusted Publisher for this exact GitHub repo/workflow.
       - run: npm publish --access public --tag beta --provenance

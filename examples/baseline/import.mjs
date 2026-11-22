@@ -7,12 +7,12 @@ const pool = new pg.Pool({connectionString: process.env.DATABASE_URL});
 const client = await pool.connect();
 const key = 'baseline:customers:v1';
 try {
+  const lock = await client.query('SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS acquired', [key]);
+  if (!lock.rows[0].acquired) throw new Error('sync already running');
   await client.query(`CREATE TABLE IF NOT EXISTS baseline_checkpoint (
     sync_key text PRIMARY KEY, offset_value integer NOT NULL DEFAULT 0, completed boolean NOT NULL DEFAULT false)`);
   await client.query(`CREATE TABLE IF NOT EXISTS baseline_customers (
     external_id text PRIMARY KEY, name text NOT NULL)`);
-  const lock = await client.query('SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS acquired', [key]);
-  if (!lock.rows[0].acquired) throw new Error('sync already running');
   try {
     await client.query('INSERT INTO baseline_checkpoint(sync_key) VALUES ($1) ON CONFLICT DO NOTHING', [key]);
     let state = (await client.query('SELECT * FROM baseline_checkpoint WHERE sync_key=$1', [key])).rows[0];

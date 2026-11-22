@@ -216,3 +216,59 @@ test('terminated database connection rolls back an interrupted page', async () =
     await isolated.end();
   }
 });
+
+test('killed worker rolls back an in-flight page and restart resumes committed cursor', async () => {
+  const {fork} = await import('node:child_process');
+  const syncKey = key('killed_worker');
+  const spawn = interrupt => fork(new URL('../fixtures/worker.mjs', import.meta.url), [], {
+    env: {...process.env, TEST_SYNC_KEY: syncKey, INTERRUPT_WORKER: interrupt ? 'yes' : 'no'},
+    stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
+  });
+  const first = spawn(true);
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('worker did not reach transaction')), 5000);
+      first.once('error', reject);
+      first.once('exit', code => reject(new Error(`worker exited early: ${code}`)));
+      first.on('message', message => {
+        if (message === 'writing') { clearTimeout(timer); resolve(); }
+      });
+    });
+    const exited = new Promise(resolve => first.once('exit', resolve));
+    first.kill('SIGKILL');
+    await exited;
+    assert.equal(await count(syncKey), 1);
+    const interrupted = await store.read(syncKey);
+    assert.deepEqual(interrupted.checkpoint, {offset: 1});
+    assert.equal(interrupted.pagesCommitted, 1);
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const second = spawn(false);
+    const result = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {second.kill(); reject(new Error('restart timed out'));}, 5000);
+      second.once('error', reject);
+      second.on('message', message => { clearTimeout(timer); resolve(message); });
+      second.once('exit', code => { if (code !== 0) reject(new Error(`restart exited: ${code}`)); });
+    });
+    assert.deepEqual(result, {status: 'completed', checkpoint: {offset: 2}});
+    assert.equal(await count(syncKey), 2);
+    assert.equal((await store.read(syncKey)).pagesCommitted, 2);
+  } finally {
+    if (first.exitCode === null && first.signalCode === null) first.kill('SIGKILL');
+  }
+});
+
+test('invalid checkpoint error preserves previously committed progress', async () => {
+  const {CheckpointInvalidError} = await import('../../dist/index.js');
+  const syncKey = key('invalid_checkpoint');
+  const engine = makeEngine(syncKey);
+  await engine.run({maxPages: 1});
+  const before = await store.read(syncKey);
+  let calls = 0;
+  const invalid = createSync({key: syncKey, store, retry: {attempts: 3, baseDelayMs: 1},
+    fetchPage: async () => { calls++; throw new CheckpointInvalidError('expired', 'full-resync'); },
+    writeBatch: async () => { throw new Error('must not write'); }});
+  await assert.rejects(invalid.run(), CheckpointInvalidError);
+  assert.equal(calls, 1);
+  assert.deepEqual(await store.read(syncKey), before);
+  assert.equal(await count(syncKey), 10);
+});

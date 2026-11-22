@@ -130,7 +130,7 @@ npm run pack:check        # what npm would publish
 **Guaranteed by the PostgreSQL adapter when configured correctly:**
 
 - Destination writes executed using the provided `tx` and checkpoint updates share one transaction.
-- A worker whose lease has expired or whose fencing token is stale cannot commit a page.
+- The adapter checks the lease and fencing token before writing and again in the checkpoint update. The transaction holds the state row lock until commit, preventing another worker from taking over during that interval. The final expiry check occurs before COMMIT, so a lease can expire between that check and the commit acknowledgement.
 - Each `(sync key)` has at most one currently active leased runner.
 - A successfully committed checkpoint is read by subsequent runs.
 
@@ -150,11 +150,13 @@ npm run pack:check        # what npm would publish
 
 Only `fetchPage()` is automatically retried. Throw `new HttpResponseError(429, 'rate limited', 2000)` to request a delay of 2 seconds; retryable statuses are 408, 425, 429 and 5xx. Other transient errors need `{retryable:true}` or a custom `retry.shouldRetry` callback. `CheckpointInvalidError` is never retried automatically. This prevents a failed *database write* from being silently retried without knowing if external effects occurred.
 
-`maxDurationMs` is a **soft limit** checked between pages; it does not cancel a fetch already in progress. Forward the `signal` to HTTP clients if they support cancellation. A lease must be long enough to cover unusually slow DB commits; heartbeats renew it while the runner is active.
+`maxDurationMs` is a **soft limit** checked between pages; it does not cancel a fetch already in progress. Forward the `signal` to HTTP clients if they support cancellation. A lease must be long enough to cover unusually slow DB commits. Heartbeats renew it while the runner is active, but a page transaction locks the lease row and can delay renewal. An expired lease causes that page transaction to roll back. A stalled database query can delay takeover until PostgreSQL releases its locks.
 
 ### Reset and re-sync
 
 A completed sync stays completed. To full-resync, use a **new `key`** (for example `my-api:contacts:v2`) and reconcile old records in your application. Do not reset a cursor blindly when a provider says the source token expired.
+
+See [the baseline comparison](https://github.com/yashmborkar/crashsafe-sync/blob/main/docs/BASELINE.md) for measured example size and tested failure scenarios.
 
 ## Roadmap
 
